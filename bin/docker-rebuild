@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Build Docker image
+docker build -t motnitin/roborate .
+
+# Push to repo
+# docker push motnitin/roborate:latest
+
+# Stop and remove existing container
+docker container stop roborate > /dev/null 2>&1
+docker container rm roborate > /dev/null 2>&1
+
+# Run a new container
+docker run -d --name roborate -e PG_HOST=host.docker.internal --cpuset-cpus="0-1" -m 500m --restart always --log-opt max-size=1m --log-opt max-file=1 motnitin/roborate
+
+# Check if the container is running
+if [ "$(docker container inspect -f '{{.State.Running}}' roborate 2>/dev/null)" = "true" ]; then
+  echo "Container roborate is running."
+else
+  echo "Error: Container roborate is not running."
+fi
+
+# Prune unused images
+docker image prune -f

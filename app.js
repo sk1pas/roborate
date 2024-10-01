@@ -29,11 +29,11 @@ async function startFetching() {
               .catch(error => console.error('Error in getHighestRateToday:', error));
 
       if (isCurrentRateHigh(currentRate, todayHighestRate)) {
+        sendMail(currentRate);
+        console.log(`${todayHighestRate} -> ${currentRate}`);
+
         insertRate(currentRate, 'PLNUSD', process.env.API_NAME)
-          .then(() => {
-            sendMail(currentRate);
-            console.log(`${todayHighestRate} -> ${currentRate}`);
-          })
+          .then(() => {})
           .catch(error => console.error('Error in insertRate:', error));
       } else {
         console.log(`Exchange Rate: ${currentRate}, todayHighestRate ${todayHighestRate}`, );

@@ -1,2 +1,2 @@
-# roborate
+# RoboRate
 Currency exchange rate notifier

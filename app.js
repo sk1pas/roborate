@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 const NOTIFY_RATE_STEP = 0.01;
 const REQUEST_DELAY = 10000; // milliseconds
@@ -154,17 +155,88 @@ async function sendMail(rate) {
     },
   });
 
-  const message = `New rate PLNUSD ${rate}: $1000 = ${rate * 1000} zloty`;
+  const messageText = `New rate PLNUSD ${rate}: $1000 = ${rate * 1000} zloty`;
 
-  const email = await emailProvider.sendMail({
+  const messageHtml = `
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style type="text/css">
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          width: 100%;
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        .footer {
+          text-align: center;
+          color: gray;
+          font-size: 12px;
+          margin-top: 20px;
+        }
+        .logo {
+          display: block;
+          margin: 0 auto;
+          width: 150px;
+          height: 150px;
+          border-radius: 100px;
+        }
+        h1 {
+          text-align: center;
+          color: #283a48;
+        }
+        h2 {
+          text-align: center;
+          color: #283a48;
+        }
+        h3 {
+          text-align: center;
+          color: #283a48;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <img src="cid:roborate_200x200" alt="RoboRate Logo" class="logo">
+        <h1>RoboRate</h1>
+        <h2>${rate}</h2>
+        <h3>Today highest rate was updated</h3>
+        <h3>$1000 = ${rate * 1000} zloty</h3>
+        <div class="footer">RoboRate</div>
+      </div>
+    </body>
+  </html>
+  `;
+
+  const mailOptions = {
     from: `"RoboRate" <${process.env.SMTP_USER}>`,
     to: process.env.SMTP_USER,
     subject: 'RoboRate update',
-    text: message,
-    html: message,
+    text: messageText,
+    html: messageHtml,
+    attachments: [
+      {
+          filename: 'roborate_200x200.webp',
+          path: path.join(__dirname, 'roborate_200x200.webp'),
+          cid: 'roborate_200x200',
+      },
+  ],
+  };
+
+  const email = await emailProvider.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return console.log(error);
+    }
+    console.log('Email sent: ' + info.response);
   });
 
-  console.log("Message sent: %s", email.messageId);
+  // console.log("Message sent: %s", email.messageId);
 }
 
 function isCurrentRateHigh(currentRate, todayHighestRate) {

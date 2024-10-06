@@ -5,6 +5,8 @@ const path = require('path');
 
 const NOTIFY_RATE_STEP = 0.01;
 const REQUEST_DELAY = 10000; // milliseconds
+const WORKING_HOUR_START = 7;
+const WORKING_HOUR_END = 23;
 
 const pool = new Pool({
   host: process.env.PG_HOST,
@@ -17,29 +19,33 @@ const pool = new Pool({
 async function startFetching() {
   while (true) {
     try {
-      var todayHighestRate;
+      if (isWorkingHours()) {
+        var todayHighestRate;
 
-      const currentRate = await getJsonRate();
+        const currentRate = await getJsonRate();
 
-      insertRateIfNoRecordsToday(currentRate, 'PLNUSD', process.env.API_NAME)
-        .then(() => {})
-        .catch(error => console.error('Error in insertRateIfNoRecordsToday:', error));
-
-      await getHighestRateToday()
-              .then(rate => { todayHighestRate = rate })
-              .catch(error => console.error('Error in getHighestRateToday:', error));
-
-      if (isCurrentRateHigh(currentRate, todayHighestRate)) {
-        sendMail(currentRate);
-        console.log(`${todayHighestRate} -> ${currentRate}`);
-
-        insertRate(currentRate, 'PLNUSD', process.env.API_NAME)
+        insertRateIfNoRecordsToday(currentRate, 'PLNUSD', process.env.API_NAME)
           .then(() => {})
-          .catch(error => console.error('Error in insertRate:', error));
-      } else {
-        console.log(`Exchange Rate: ${currentRate}, todayHighestRate ${todayHighestRate}`, );
-      }
+          .catch(error => console.error('Error in insertRateIfNoRecordsToday:', error));
 
+        await getHighestRateToday()
+                .then(rate => { todayHighestRate = rate })
+                .catch(error => console.error('Error in getHighestRateToday:', error));
+
+        if (isCurrentRateHigh(currentRate, todayHighestRate)) {
+          sendMail(currentRate);
+          console.log(`${todayHighestRate} -> ${currentRate}`);
+
+          insertRate(currentRate, 'PLNUSD', process.env.API_NAME)
+            .then(() => {})
+            .catch(error => console.error('Error in insertRate:', error));
+        } else {
+          console.log(`Exchange Rate: ${currentRate}, todayHighestRate ${todayHighestRate}`, );
+        }
+      } else {
+        console.log('Waiting for working time begin');
+        await timeout(600000); // 10 minutes
+      }
     } catch (error) {
       console.error('Error:', error);
     }
@@ -141,7 +147,7 @@ function truncateFloat(value, decimals) {
   const stringValue = value.toString();
   const [integerPart, decimalPart] = stringValue.split('.');
 
-  return decimalPart ? `${integerPart}.${decimalPart.slice(0, decimals)}` : integerPart;
+  return decimalPart && decimals > 0 ? `${integerPart}.${decimalPart.slice(0, decimals)}` : integerPart;
 }
 
 async function sendMail(rate) {
@@ -203,11 +209,11 @@ async function sendMail(rate) {
     </head>
     <body>
       <div class="container">
+        <h1>${truncateFloat(rate, 2)} zł = $1</h2>
+        <h2>${truncateFloat(rate * 100, 1)} zł = $100</h2>
+        <h2>${truncateFloat(rate * 1000, 0)} zł = $1000</h2>
+        <h3>Today the highest rate was updated</h3>
         <img src="cid:roborate_200x200" alt="RoboRate Logo" class="logo">
-        <h1>RoboRate</h1>
-        <h2>${rate}</h2>
-        <h3>Today highest rate was updated</h3>
-        <h3>$1000 = ${rate * 1000} zloty</h3>
         <div class="footer">RoboRate</div>
       </div>
     </body>
@@ -243,6 +249,19 @@ function isCurrentRateHigh(currentRate, todayHighestRate) {
   if (!todayHighestRate) return false;
 
   return Math.round(truncateFloat(currentRate, 2) * 100) - Math.round(truncateFloat(todayHighestRate, 2) * 100) >= Math.round(NOTIFY_RATE_STEP * 100);
+}
+
+function isWorkingHours() {
+  const now = new Date();
+  const hours = now.getHours();
+  const dayOfWeek = now.getDay();
+
+  return (
+    hours >= WORKING_HOUR_START &&
+      hours < WORKING_HOUR_END &&
+      dayOfWeek !== 6 &&  // Saturday
+      dayOfWeek !== 0     // Sunday
+  )
 }
 
 process.on('exit', async () => {

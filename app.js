@@ -161,7 +161,7 @@ async function sendMail(rate) {
     },
   });
 
-  const messageText = `New rate PLNUSD ${rate}: $1000 = ${rate * 1000} zloty`;
+  const messageText = `New rate: ${truncateFloat(rate, 4)} zł = $1`;
 
   const messageHtml = `
   <html>
@@ -209,7 +209,7 @@ async function sendMail(rate) {
     </head>
     <body>
       <div class="container">
-        <h1>${truncateFloat(rate, 2)} zł = $1</h2>
+        <h1>${truncateFloat(rate, 4)} zł = $1</h2>
         <h2>${truncateFloat(rate * 100, 1)} zł = $100</h2>
         <h2>${truncateFloat(rate * 1000, 0)} zł = $1000</h2>
         <h3>Today the highest rate was updated</h3>
@@ -235,10 +235,11 @@ async function sendMail(rate) {
   ],
   };
 
-  const email = await emailProvider.sendMail(mailOptions, (error, info) => {
+  emailProvider.sendMail(mailOptions, (error, info) => {
     if (error) {
       return console.log(error);
     }
+
     console.log('Email sent: ' + info.response);
   });
 

@@ -5,8 +5,8 @@ const path = require('path');
 
 const NOTIFY_RATE_STEP = 0.01;
 const REQUEST_DELAY = 10000; // milliseconds
-const WORKING_HOUR_START = 7;
-const WORKING_HOUR_END = 23;
+const WORKING_HOUR_START = 5; // UTC
+const WORKING_HOUR_END = 21;  // UTC
 
 const pool = new Pool({
   host: process.env.PG_HOST,

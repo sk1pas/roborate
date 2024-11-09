@@ -1,5 +1,7 @@
 FROM node:18-alpine
 
+RUN apk add --no-cache sqlite
+
 WORKDIR /app
 
 # Install dependencies

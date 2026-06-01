@@ -1,23 +1,35 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-checkEnvKey('API_URL');
 checkEnvKey('SMTP_HOST');
 checkEnvKey('SMTP_PORT');
 checkEnvKey('SMTP_USER');
 checkEnvKey('SMTP_PASSWORD');
 checkEnvKey('EMAIL_RECIPIENT');
 
-if (process.env.API_URL && process.env.API_URL.length > 0) {
-  testScrape();
-}
+testScrape();
 
 async function testScrape() {
   try {
-    const response = await fetch(process.env.API_URL, {
+    const today = new Date().toISOString().slice(0, 10);
+    const url = `https://systemkantor.aliorbank.pl/chart/PLN-USD/?from=${today}&to=${today}&range=false`;
+
+    const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-        'Referer': 'https://www.google.com/',
+        'Accept': '*/*',
+        'Accept-Language': 'en,pl;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Origin': 'https://kantor.aliorbank.pl',
+        'Pragma': 'no-cache',
+        'Referer': 'https://kantor.aliorbank.pl/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
       },
     });
 
@@ -26,16 +38,18 @@ async function testScrape() {
     }
 
     const json = await response.json();
-    logSuccess(`API URL response: ${JSON.stringify(json)}`);
+    const rates = json.diagram.rates;
+    const rate = rates[rates.length - 1].buy;
+    logSuccess(`API response rate (buy): ${rate}`);
 
     if (
       process.env.SMTP_HOST && process.env.SMTP_HOST.length > 0 &&
-      process.env.SMTP_HOST && process.env.SMTP_PORT.length > 0 &&
-      process.env.SMTP_HOST && process.env.SMTP_USER.length > 0 &&
-      process.env.SMTP_HOST && process.env.SMTP_PASSWORD.length > 0 &&
-      process.env.SMTP_HOST && process.env.EMAIL_RECIPIENT.length > 0
+      process.env.SMTP_PORT && process.env.SMTP_PORT.length > 0 &&
+      process.env.SMTP_USER && process.env.SMTP_USER.length > 0 &&
+      process.env.SMTP_PASSWORD && process.env.SMTP_PASSWORD.length > 0 &&
+      process.env.EMAIL_RECIPIENT && process.env.EMAIL_RECIPIENT.length > 0
     ) {
-      testEmail(json.bestOffers.forex_now);
+      testEmail(rate);
     }
   } catch (error) {
     return logError(`Request API URL error: ${error}`);

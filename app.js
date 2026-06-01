@@ -56,10 +56,25 @@ async function startFetching() {
 
 async function getJsonRate() {
   try {
-    const response = await fetch(process.env.API_URL, {
+    const today = new Date().toISOString().slice(0, 10);
+    const url = `https://systemkantor.aliorbank.pl/chart/PLN-USD/?from=${today}&to=${today}&range=false`;
+
+    const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-        'Referer': process.env.API_REFERER || 'https://www.google.com/',
+        'Accept': '*/*',
+        'Accept-Language': 'en,pl;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Origin': 'https://kantor.aliorbank.pl',
+        'Pragma': 'no-cache',
+        'Referer': 'https://kantor.aliorbank.pl/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+        'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
       },
     });
 
@@ -68,7 +83,8 @@ async function getJsonRate() {
     }
 
     const json = await response.json();
-    return json.bestOffers.forex_now;
+    const rates = json.diagram.rates;
+    return rates[rates.length - 1].buy;
   } catch (error) {
     console.error('Error fetching data:', error);
     throw error; // Rethrow the error to be handled by the caller
